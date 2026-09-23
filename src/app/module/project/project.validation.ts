@@ -19,6 +19,7 @@ export const createProjectSchema = z.object({
 		description: z.string().max(2000).optional(),
 		startDate: z.iso.datetime().optional(),
 		dueDate: z.iso.datetime().optional(),
+		teamId: z.uuid().optional(),
 	}),
 });
 export const updateProjectSchema = z.object({
@@ -28,5 +29,6 @@ export const updateProjectSchema = z.object({
 		status: status.optional(),
 		startDate: z.iso.datetime().nullable().optional(),
 		dueDate: z.iso.datetime().nullable().optional(),
+		teamId: z.uuid().nullable().optional(),
 	}),
 });

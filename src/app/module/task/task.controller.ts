@@ -24,6 +24,13 @@ export const myTasks = catchAsync(async (req: Request, res: Response) =>
 		...(await service.myTasks(req.user!.id, req.query)),
 	}),
 );
+export const kanban = catchAsync(async (req: Request, res: Response) =>
+	sendResponse(res, {
+		statusCode: 200,
+		message: "Kanban board retrieved",
+		data: await service.kanban(req.user!.id, req.query),
+	}),
+);
 export const getById = catchAsync(async (req: Request, res: Response) =>
 	sendResponse(res, {
 		statusCode: 200,

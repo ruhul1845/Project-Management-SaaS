@@ -15,6 +15,7 @@ taskRoutes.use(checkAuth);
 taskRoutes.post("/", validateRequest(createTaskSchema), controller.create);
 taskRoutes.get("/", controller.list);
 taskRoutes.get("/mine", controller.myTasks);
+taskRoutes.get("/kanban", controller.kanban);
 taskRoutes.get("/:id", controller.getById);
 taskRoutes.patch("/:id", validateRequest(updateTaskSchema), controller.update);
 taskRoutes.patch(

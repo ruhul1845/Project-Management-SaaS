@@ -21,11 +21,7 @@ export const update = catchAsync(async (req: Request, res: Response) =>
 	sendResponse(res, {
 		statusCode: 200,
 		message: "Comment updated",
-		data: await service.update(
-			req.user!.id,
-			String(req.params.id),
-			req.body.content,
-		),
+		data: await service.update(req.user!.id, String(req.params.id), req.body),
 	}),
 );
 export const remove = catchAsync(async (req: Request, res: Response) => {

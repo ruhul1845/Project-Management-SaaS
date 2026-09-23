@@ -1,7 +1,22 @@
 enum Role {
+  ADMIN
   OWNER
   MANAGER
   MEMBER
+  GUEST
+}
+
+enum TeamRole {
+  LEAD
+  MEMBER
+  VIEWER
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  COMMENT_MENTION
+  MEMBER_ADDED
+  SYSTEM
 }
 
 enum AuthProvider {

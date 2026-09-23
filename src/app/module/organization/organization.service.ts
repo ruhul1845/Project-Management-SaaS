@@ -5,6 +5,7 @@ import { clearOrganizationCache } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
 import { writeAuditLog } from "../../utils/audit";
 import { getPagination } from "../../utils/query";
+import { createNotification } from "../../utils/notification";
 
 const slugify = (name: string) =>
 	name
@@ -30,7 +31,10 @@ export const create = async (
 		await tx.membership.create({
 			data: { organizationId: organization.id, userId, role: "OWNER" },
 		});
-		await tx.user.update({ where: { id: userId }, data: { role: "OWNER" } });
+		await tx.user.updateMany({
+			where: { id: userId, role: { not: "ADMIN" } },
+			data: { role: "OWNER" },
+		});
 		await writeAuditLog(tx, {
 			organizationId: organization.id,
 			actorId: userId,
@@ -112,7 +116,7 @@ export const softDelete = async (
 export const addMember = async (
 	organizationId: string,
 	actorId: string,
-	input: { email: string; role: "MANAGER" | "MEMBER" },
+	input: { email: string; role: "MANAGER" | "MEMBER" | "GUEST" },
 	ipAddress?: string,
 ) => {
 	const user = await prisma.user.findUnique({
@@ -125,6 +129,14 @@ export const addMember = async (
 		include: {
 			user: { select: { id: true, name: true, email: true, avatarUrl: true } },
 		},
+	});
+	await createNotification(prisma, {
+		userId: user.id,
+		organizationId,
+		type: "MEMBER_ADDED",
+		title: "Added to organization",
+		message: "You were added to an organization workspace",
+		metadata: { membershipId: member.id, role: input.role },
 	});
 	await writeAuditLog(prisma, {
 		organizationId,

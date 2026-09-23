@@ -25,6 +25,7 @@ model Task {
 
   comments    Comment[]
   attachments Attachment[]
+  labels      TaskLabel[]
 
   @@index([projectId, status, priority])
   @@index([assigneeId, deletedAt])
@@ -41,8 +42,9 @@ model Comment {
   taskId    String
   authorId  String
 
-  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  author User @relation(fields: [authorId], references: [id])
+  task     Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id])
+  mentions Mention[]
 
   @@index([taskId, deletedAt])
   @@map("comments")

@@ -16,7 +16,13 @@
     { "key": "sprintId", "value": "" },
     { "key": "taskId", "value": "" },
     { "key": "commentId", "value": "" },
-    { "key": "paymentId", "value": "" }
+    { "key": "paymentId", "value": "" },
+    { "key": "teamId", "value": "" },
+    { "key": "teamMemberId", "value": "" },
+    { "key": "labelId", "value": "" },
+    { "key": "notificationId", "value": "" },
+    { "key": "mentionedUserId", "value": "" },
+    { "key": "adminUserId", "value": "" }
   ],
   "item": [
     {
@@ -57,12 +63,29 @@
         { "name": "Add Member", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"email\": \"member@taskflow.dev\", \"role\": \"MEMBER\" }" }, "url": "{{baseUrl}}/organizations/{{organizationId}}/members" } },
         {
           "name": "List Members",
-          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data[1]) pm.collectionVariables.set('memberId', json.data[1].id);"] } }],
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data[1]) { pm.collectionVariables.set('memberId', json.data[1].id); pm.collectionVariables.set('mentionedUserId', json.data[1].user.id); }"] } }],
           "request": { "method": "GET", "url": "{{baseUrl}}/organizations/{{organizationId}}/members?page=1&limit=10&search=" }
         },
-        { "name": "Change Member Role", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"role\": \"MANAGER\" }" }, "url": "{{baseUrl}}/organizations/{{organizationId}}/members/{{memberId}}" } },
-        { "name": "Remove Member", "request": { "method": "DELETE", "url": "{{baseUrl}}/organizations/{{organizationId}}/members/{{memberId}}" } },
-        { "name": "Soft Delete Organization", "request": { "method": "DELETE", "url": "{{baseUrl}}/organizations/{{organizationId}}" } }
+        { "name": "Change Member Role", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"role\": \"MANAGER\" }" }, "url": "{{baseUrl}}/organizations/{{organizationId}}/members/{{memberId}}" } }
+      ]
+    },
+    {
+      "name": "Teams",
+      "item": [
+        {
+          "name": "Create Team",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('teamId', json.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"organizationId\": \"{{organizationId}}\",\n  \"name\": \"Product Team\",\n  \"description\": \"Builds the core product\"\n}" }, "url": "{{baseUrl}}/teams" }
+        },
+        { "name": "List Teams", "request": { "method": "GET", "url": "{{baseUrl}}/teams?organizationId={{organizationId}}&search=" } },
+        { "name": "Get Team", "request": { "method": "GET", "url": "{{baseUrl}}/teams/{{teamId}}" } },
+        { "name": "Update Team", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"description\": \"Updated product team\" }" }, "url": "{{baseUrl}}/teams/{{teamId}}" } },
+        {
+          "name": "Add Team Member",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('teamMemberId', json.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"email\": \"member@taskflow.dev\", \"role\": \"MEMBER\" }" }, "url": "{{baseUrl}}/teams/{{teamId}}/members" }
+        },
+        { "name": "Change Team Member Role", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"role\": \"LEAD\" }" }, "url": "{{baseUrl}}/teams/{{teamId}}/members/{{teamMemberId}}" } }
       ]
     },
     {
@@ -71,12 +94,11 @@
         {
           "name": "Create Project",
           "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('projectId', json.data.id);"] } }],
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"organizationId\": \"{{organizationId}}\",\n  \"name\": \"Website Redesign\",\n  \"key\": \"WEB\",\n  \"description\": \"Launch the new marketing website\"\n}" }, "url": "{{baseUrl}}/projects" }
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"organizationId\": \"{{organizationId}}\",\n  \"teamId\": \"{{teamId}}\",\n  \"name\": \"Website Redesign\",\n  \"key\": \"WEB\",\n  \"description\": \"Launch the new marketing website\"\n}" }, "url": "{{baseUrl}}/projects" }
         },
         { "name": "List Projects", "request": { "method": "GET", "url": "{{baseUrl}}/projects?organizationId={{organizationId}}&page=1&limit=10&search=&status=ACTIVE&sortBy=createdAt&sortOrder=desc" } },
         { "name": "Get Project", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}" } },
         { "name": "Update Project", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"ACTIVE\" }" }, "url": "{{baseUrl}}/projects/{{projectId}}" } },
-        { "name": "Soft Delete Project", "request": { "method": "DELETE", "url": "{{baseUrl}}/projects/{{projectId}}" } },
         {
           "name": "Create Sprint",
           "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('sprintId', json.data.id);"] } }],
@@ -98,20 +120,44 @@
         { "name": "Create Subtask", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"projectId\": \"{{projectId}}\", \"parentId\": \"{{taskId}}\", \"title\": \"Add mobile menu\" }" }, "url": "{{baseUrl}}/tasks" } },
         { "name": "List and Filter Tasks", "request": { "method": "GET", "url": "{{baseUrl}}/tasks?projectId={{projectId}}&page=1&limit=10&search=navigation&priority=HIGH&sortBy=createdAt&sortOrder=desc" } },
         { "name": "My Assigned Tasks", "request": { "method": "GET", "url": "{{baseUrl}}/tasks/mine?organizationId={{organizationId}}&page=1&limit=10" } },
+        { "name": "Kanban Board", "request": { "method": "GET", "url": "{{baseUrl}}/tasks/kanban?projectId={{projectId}}&sprintId={{sprintId}}" } },
         { "name": "Get Task", "request": { "method": "GET", "url": "{{baseUrl}}/tasks/{{taskId}}" } },
         { "name": "Update Task", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"priority\": \"URGENT\" }" }, "url": "{{baseUrl}}/tasks/{{taskId}}" } },
         { "name": "Move Task", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"IN_PROGRESS\" }" }, "url": "{{baseUrl}}/tasks/{{taskId}}/status" } },
-        { "name": "Assign Task", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"assigneeId\": null }" }, "url": "{{baseUrl}}/tasks/{{taskId}}/assign" } },
+        { "name": "Assign Task", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"assigneeId\": \"{{mentionedUserId}}\" }" }, "url": "{{baseUrl}}/tasks/{{taskId}}/assign" } },
         { "name": "Upload Attachment", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": [] }] }, "url": "{{baseUrl}}/tasks/{{taskId}}/attachments" } },
-        { "name": "Soft Delete Task", "request": { "method": "DELETE", "url": "{{baseUrl}}/tasks/{{taskId}}" } },
         {
           "name": "Add Comment",
           "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('commentId', json.data.id);"] } }],
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"taskId\": \"{{taskId}}\", \"content\": \"I am working on this now.\" }" }, "url": "{{baseUrl}}/comments" }
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"taskId\": \"{{taskId}}\", \"content\": \"I am working on this now.\", \"mentionedUserIds\": [\"{{mentionedUserId}}\"] }" }, "url": "{{baseUrl}}/comments" }
         },
         { "name": "List Comments", "request": { "method": "GET", "url": "{{baseUrl}}/comments?taskId={{taskId}}" } },
-        { "name": "Update Comment", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"content\": \"Updated progress note.\" }" }, "url": "{{baseUrl}}/comments/{{commentId}}" } },
-        { "name": "Delete Comment", "request": { "method": "DELETE", "url": "{{baseUrl}}/comments/{{commentId}}" } }
+        { "name": "Update Comment", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"content\": \"Updated progress note.\" }" }, "url": "{{baseUrl}}/comments/{{commentId}}" } }
+      ]
+    },
+    {
+      "name": "Labels, Notifications and Calendar",
+      "item": [
+        {
+          "name": "Create Label",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('labelId', json.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"organizationId\": \"{{organizationId}}\", \"name\": \"Bug\", \"color\": \"#EF4444\" }" }, "url": "{{baseUrl}}/labels" }
+        },
+        { "name": "List Labels", "request": { "method": "GET", "url": "{{baseUrl}}/labels?organizationId={{organizationId}}" } },
+        { "name": "Update Label", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"color\": \"#DC2626\" }" }, "url": "{{baseUrl}}/labels/{{labelId}}" } },
+        { "name": "Assign Label to Task", "request": { "method": "POST", "url": "{{baseUrl}}/labels/{{labelId}}/tasks/{{taskId}}" } },
+        { "name": "Filter Tasks by Label", "request": { "method": "GET", "url": "{{baseUrl}}/tasks?projectId={{projectId}}&labelId={{labelId}}&page=1&limit=20" } },
+        { "name": "Remove Label from Task", "request": { "method": "DELETE", "url": "{{baseUrl}}/labels/{{labelId}}/tasks/{{taskId}}" } },
+        { "name": "Delete Label", "request": { "method": "DELETE", "url": "{{baseUrl}}/labels/{{labelId}}" } },
+        {
+          "name": "List Notifications",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data[0]) pm.collectionVariables.set('notificationId', json.data[0].id);"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/notifications?unread=true&page=1&limit=20" }
+        },
+        { "name": "Unread Notification Count", "request": { "method": "GET", "url": "{{baseUrl}}/notifications/unread-count" } },
+        { "name": "Mark Notification Read", "request": { "method": "PATCH", "url": "{{baseUrl}}/notifications/{{notificationId}}/read" } },
+        { "name": "Mark All Notifications Read", "request": { "method": "PATCH", "url": "{{baseUrl}}/notifications/read-all" } },
+        { "name": "Calendar", "request": { "method": "GET", "url": "{{baseUrl}}/calendar?organizationId={{organizationId}}&from=2026-09-01T00:00:00.000Z&to=2026-10-31T23:59:59.999Z" } }
       ]
     },
     {
@@ -125,6 +171,32 @@
         { "name": "Get Payment", "request": { "method": "GET", "url": "{{baseUrl}}/payments/{{paymentId}}" } },
         { "name": "Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/analytics/dashboard?organizationId={{organizationId}}" } },
         { "name": "Audit Logs", "request": { "method": "GET", "url": "{{baseUrl}}/analytics/audit-logs?organizationId={{organizationId}}&page=1&limit=10" } }
+      ]
+    },
+    {
+      "name": "System Administration",
+      "item": [
+        { "name": "Admin Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/admin/dashboard" } },
+        {
+          "name": "List Users",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data[0]) pm.collectionVariables.set('adminUserId', json.data[0].id);"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/users?page=1&limit=20&search=" }
+        },
+        { "name": "List Organizations", "request": { "method": "GET", "url": "{{baseUrl}}/admin/organizations?page=1&limit=20&search=" } },
+        { "name": "Block User", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"BLOCKED\" }" }, "url": "{{baseUrl}}/admin/users/{{adminUserId}}/status" } },
+        { "name": "Promote User to Admin", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"role\": \"ADMIN\" }" }, "url": "{{baseUrl}}/admin/users/{{adminUserId}}/role" } }
+      ]
+    },
+    {
+      "name": "Cleanup (Run Last)",
+      "item": [
+        { "name": "Delete Comment", "request": { "method": "DELETE", "url": "{{baseUrl}}/comments/{{commentId}}" } },
+        { "name": "Soft Delete Task", "request": { "method": "DELETE", "url": "{{baseUrl}}/tasks/{{taskId}}" } },
+        { "name": "Soft Delete Project", "request": { "method": "DELETE", "url": "{{baseUrl}}/projects/{{projectId}}" } },
+        { "name": "Remove Team Member", "request": { "method": "DELETE", "url": "{{baseUrl}}/teams/{{teamId}}/members/{{teamMemberId}}" } },
+        { "name": "Delete Team", "request": { "method": "DELETE", "url": "{{baseUrl}}/teams/{{teamId}}" } },
+        { "name": "Remove Organization Member", "request": { "method": "DELETE", "url": "{{baseUrl}}/organizations/{{organizationId}}/members/{{memberId}}" } },
+        { "name": "Soft Delete Organization", "request": { "method": "DELETE", "url": "{{baseUrl}}/organizations/{{organizationId}}" } }
       ]
     }
   ]

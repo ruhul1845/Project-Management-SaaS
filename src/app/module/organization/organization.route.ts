@@ -20,7 +20,7 @@ organizationRoutes.post(
 organizationRoutes.get("/mine", controller.getMine);
 organizationRoutes.get(
 	"/:organizationId",
-	checkOrganizationRole("OWNER", "MANAGER", "MEMBER"),
+	checkOrganizationRole("OWNER", "MANAGER", "MEMBER", "GUEST"),
 	controller.getById,
 );
 organizationRoutes.patch(
@@ -42,7 +42,7 @@ organizationRoutes.post(
 );
 organizationRoutes.get(
 	"/:organizationId/members",
-	checkOrganizationRole("OWNER", "MANAGER", "MEMBER"),
+	checkOrganizationRole("OWNER", "MANAGER", "MEMBER", "GUEST"),
 	controller.listMembers,
 );
 organizationRoutes.patch(

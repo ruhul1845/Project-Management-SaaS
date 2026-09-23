@@ -13,10 +13,13 @@ model Organization {
   ownerId String
   owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id])
 
-  memberships Membership[]
-  projects    Project[]
-  payments    Payment[]
-  auditLogs   AuditLog[]
+  memberships   Membership[]
+  projects      Project[]
+  payments      Payment[]
+  auditLogs     AuditLog[]
+  teams         Team[]
+  labels        Label[]
+  notifications Notification[]
 
   @@index([ownerId])
   @@index([deletedAt])

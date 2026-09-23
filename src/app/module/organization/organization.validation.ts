@@ -18,10 +18,10 @@ export const updateOrganizationSchema = z.object({
 export const addMemberSchema = z.object({
 	body: z.object({
 		email: z.email(),
-		role: z.enum(["MANAGER", "MEMBER"]).default("MEMBER"),
+		role: z.enum(["MANAGER", "MEMBER", "GUEST"]).default("MEMBER"),
 	}),
 });
 
 export const updateMemberRoleSchema = z.object({
-	body: z.object({ role: z.enum(["MANAGER", "MEMBER"]) }),
+	body: z.object({ role: z.enum(["MANAGER", "MEMBER", "GUEST"]) }),
 });

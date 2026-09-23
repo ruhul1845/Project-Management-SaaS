@@ -10,12 +10,33 @@
 */
 
 export const Role = {
+  ADMIN: 'ADMIN',
   OWNER: 'OWNER',
   MANAGER: 'MANAGER',
-  MEMBER: 'MEMBER'
+  MEMBER: 'MEMBER',
+  GUEST: 'GUEST'
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]
+
+
+export const TeamRole = {
+  LEAD: 'LEAD',
+  MEMBER: 'MEMBER',
+  VIEWER: 'VIEWER'
+} as const
+
+export type TeamRole = (typeof TeamRole)[keyof typeof TeamRole]
+
+
+export const NotificationType = {
+  TASK_ASSIGNED: 'TASK_ASSIGNED',
+  COMMENT_MENTION: 'COMMENT_MENTION',
+  MEMBER_ADDED: 'MEMBER_ADDED',
+  SYSTEM: 'SYSTEM'
+} as const
+
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]
 
 
 export const AuthProvider = {

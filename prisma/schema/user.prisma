@@ -23,6 +23,9 @@ model User {
   attachments        Attachment[]
   payments           Payment[]
   auditLogs          AuditLog[]
+  teamMemberships    TeamMember[]
+  mentions           Mention[]
+  notifications      Notification[]
 
   @@index([email])
   @@index([status, deletedAt])

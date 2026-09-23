@@ -29,7 +29,7 @@ export const requireProjectMembership = async (
 			deletedAt: null,
 			organization: { deletedAt: null },
 		},
-		select: { id: true, organizationId: true },
+		select: { id: true, organizationId: true, teamId: true },
 	});
 	if (!project) throw new AppError(404, "Project not found");
 	const membership = await requireOrganizationMembership(
@@ -37,6 +37,17 @@ export const requireProjectMembership = async (
 		userId,
 		roles,
 	);
+	if (membership.role === "MEMBER" || membership.role === "GUEST") {
+		if (!project.teamId) {
+			if (membership.role === "GUEST")
+				throw new AppError(403, "Guest project access denied");
+			return { project, membership };
+		}
+		const teamMember = await prisma.teamMember.findUnique({
+			where: { teamId_userId: { teamId: project.teamId, userId } },
+		});
+		if (!teamMember) throw new AppError(403, "Team project access denied");
+	}
 	return { project, membership };
 };
 
@@ -54,8 +65,8 @@ export const requireTaskMembership = async (
 		},
 	});
 	if (!task) throw new AppError(404, "Task not found");
-	const membership = await requireOrganizationMembership(
-		task.project.organizationId,
+	const { membership } = await requireProjectMembership(
+		task.projectId,
 		userId,
 		roles,
 	);

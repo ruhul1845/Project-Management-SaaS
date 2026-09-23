@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
+import type { Role } from "../../../generated/prisma/client";
 import { config } from "../../config";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
@@ -17,11 +18,7 @@ const safeUserSelect = {
 	createdAt: true,
 } as const;
 
-const issueTokens = async (user: {
-	id: string;
-	email: string;
-	role: "OWNER" | "MANAGER" | "MEMBER";
-}) => {
+const issueTokens = async (user: { id: string; email: string; role: Role }) => {
 	const payload = { id: user.id, email: user.email, role: user.role };
 	const accessToken = createToken(
 		payload,

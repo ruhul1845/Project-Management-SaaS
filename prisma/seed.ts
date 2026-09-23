@@ -44,7 +44,23 @@ const main = async () => {
 		update: { role: "OWNER" },
 		create: { userId: user.id, organizationId: organization.id, role: "OWNER" },
 	});
+	const adminEmail = (
+		process.env.DEMO_ADMIN_EMAIL ?? "admin@taskflow.dev"
+	).toLowerCase();
+	const adminPassword = process.env.DEMO_ADMIN_PASSWORD ?? "Admin@12345";
+	await prisma.user.upsert({
+		where: { email: adminEmail },
+		update: { role: "ADMIN", status: "ACTIVE" },
+		create: {
+			name: process.env.DEMO_ADMIN_NAME ?? "TaskFlow Admin",
+			email: adminEmail,
+			password: await bcrypt.hash(adminPassword, 12),
+			role: "ADMIN",
+			emailVerified: true,
+		},
+	});
 	console.log(`Seeded demo owner: ${email}`);
+	console.log(`Seeded demo admin: ${adminEmail}`);
 };
 
 main().finally(() => prisma.$disconnect());

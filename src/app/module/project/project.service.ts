@@ -16,6 +16,7 @@ type ProjectInput = {
 	description?: string;
 	startDate?: string;
 	dueDate?: string;
+	teamId?: string;
 };
 
 export const create = async (
@@ -27,6 +28,13 @@ export const create = async (
 		"OWNER",
 		"MANAGER",
 	]);
+	if (input.teamId) {
+		const team = await prisma.team.findFirst({
+			where: { id: input.teamId, organizationId: input.organizationId },
+		});
+		if (!team)
+			throw new AppError(400, "Team does not belong to this organization");
+	}
 	if (
 		input.startDate &&
 		input.dueDate &&
@@ -51,33 +59,45 @@ export const create = async (
 
 export const list = async (userId: string, query: Record<string, unknown>) => {
 	const organizationId = String(query.organizationId ?? "");
-	await requireOrganizationMembership(organizationId, userId);
+	const membership = await requireOrganizationMembership(
+		organizationId,
+		userId,
+	);
 	const { page, limit, skip } = getPagination(query);
 	const search = typeof query.search === "string" ? query.search : undefined;
 	const status =
 		typeof query.status === "string"
 			? (query.status as ProjectStatus)
 			: undefined;
+	const teamId = typeof query.teamId === "string" ? query.teamId : undefined;
 	const sortBy = ["createdAt", "updatedAt", "dueDate", "name"].includes(
 		String(query.sortBy),
 	)
 		? String(query.sortBy)
 		: "createdAt";
 	const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
+	const accessAndSearch: Prisma.ProjectWhereInput[] = [];
+	if (membership.role === "GUEST")
+		accessAndSearch.push({ team: { members: { some: { userId } } } });
+	if (membership.role === "MEMBER")
+		accessAndSearch.push({
+			OR: [{ teamId: null }, { team: { members: { some: { userId } } } }],
+		});
+	if (search)
+		accessAndSearch.push({
+			OR: [
+				{ name: { contains: search, mode: "insensitive" } },
+				{ key: { contains: search, mode: "insensitive" } },
+			],
+		});
 	const where: Prisma.ProjectWhereInput = {
 		organizationId,
 		deletedAt: null,
 		...(status ? { status } : {}),
-		...(search
-			? {
-					OR: [
-						{ name: { contains: search, mode: "insensitive" } },
-						{ key: { contains: search, mode: "insensitive" } },
-					],
-				}
-			: {}),
+		...(teamId ? { teamId } : {}),
+		...(accessAndSearch.length ? { AND: accessAndSearch } : {}),
 	};
-	const cacheKey = `org:${organizationId}:projects:${JSON.stringify({ page, limit, search, status, sortBy, sortOrder })}`;
+	const cacheKey = `org:${organizationId}:projects:${JSON.stringify({ page, limit, search, status, teamId, userId, sortBy, sortOrder })}`;
 	if (redisClient?.isOpen) {
 		const cached = await redisClient.get(cacheKey);
 		if (cached) return JSON.parse(cached);
@@ -88,7 +108,10 @@ export const list = async (userId: string, query: Record<string, unknown>) => {
 			skip,
 			take: limit,
 			orderBy: { [sortBy]: sortOrder },
-			include: { _count: { select: { tasks: true, sprints: true } } },
+			include: {
+				team: { select: { id: true, name: true } },
+				_count: { select: { tasks: true, sprints: true } },
+			},
 		}),
 		prisma.project.count({ where }),
 	]);
@@ -123,6 +146,13 @@ export const update = async (
 		"MANAGER",
 	]);
 	const data = { ...input } as Record<string, unknown>;
+	if (typeof data.teamId === "string") {
+		const team = await prisma.team.findFirst({
+			where: { id: data.teamId, organizationId: project.organizationId },
+		});
+		if (!team)
+			throw new AppError(400, "Team does not belong to this organization");
+	}
 	if (typeof data.startDate === "string")
 		data.startDate = new Date(data.startDate);
 	if (typeof data.dueDate === "string") data.dueDate = new Date(data.dueDate);

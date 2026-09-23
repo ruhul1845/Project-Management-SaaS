@@ -13,6 +13,7 @@ import {
 } from "../../utils/access";
 import { writeAuditLog } from "../../utils/audit";
 import { getPagination } from "../../utils/query";
+import { createNotification } from "../../utils/notification";
 
 type TaskInput = {
 	projectId: string;
@@ -25,15 +26,12 @@ type TaskInput = {
 	parentId?: string;
 };
 
-const verifyRelations = async (
-	input: {
-		projectId: string;
-		sprintId?: string | null;
-		assigneeId?: string | null;
-		parentId?: string | null;
-	},
-	organizationId: string,
-) => {
+const verifyRelations = async (input: {
+	projectId: string;
+	sprintId?: string | null;
+	assigneeId?: string | null;
+	parentId?: string | null;
+}) => {
 	if (input.sprintId) {
 		const sprint = await prisma.sprint.findFirst({
 			where: { id: input.sprintId, projectId: input.projectId },
@@ -53,7 +51,11 @@ const verifyRelations = async (
 			throw new AppError(400, "Parent task does not belong to this project");
 	}
 	if (input.assigneeId)
-		await requireOrganizationMembership(organizationId, input.assigneeId);
+		await requireProjectMembership(input.projectId, input.assigneeId, [
+			"OWNER",
+			"MANAGER",
+			"MEMBER",
+		]);
 };
 
 export const create = async (
@@ -61,8 +63,12 @@ export const create = async (
 	input: TaskInput,
 	ipAddress?: string,
 ) => {
-	const { project } = await requireProjectMembership(input.projectId, userId);
-	await verifyRelations(input, project.organizationId);
+	const { project } = await requireProjectMembership(input.projectId, userId, [
+		"OWNER",
+		"MANAGER",
+		"MEMBER",
+	]);
+	await verifyRelations(input);
 	const task = await prisma.task.create({
 		data: { ...input, reporterId: userId },
 	});
@@ -93,6 +99,7 @@ export const list = async (userId: string, query: Record<string, unknown>) => {
 		typeof query.assigneeId === "string" ? query.assigneeId : undefined;
 	const sprintId =
 		typeof query.sprintId === "string" ? query.sprintId : undefined;
+	const labelId = typeof query.labelId === "string" ? query.labelId : undefined;
 	const sortBy = [
 		"createdAt",
 		"updatedAt",
@@ -110,6 +117,7 @@ export const list = async (userId: string, query: Record<string, unknown>) => {
 		...(priority ? { priority } : {}),
 		...(assigneeId ? { assigneeId } : {}),
 		...(sprintId ? { sprintId } : {}),
+		...(labelId ? { labels: { some: { labelId } } } : {}),
 		...(search
 			? {
 					OR: [
@@ -128,6 +136,7 @@ export const list = async (userId: string, query: Record<string, unknown>) => {
 			include: {
 				assignee: { select: { id: true, name: true, avatarUrl: true } },
 				reporter: { select: { id: true, name: true } },
+				labels: { include: { label: true } },
 				_count: {
 					select: { comments: true, subtasks: true, attachments: true },
 				},
@@ -176,24 +185,39 @@ export const myTasks = async (
 };
 
 export const getById = async (userId: string, id: string) => {
-	await requireTaskMembership(id, userId);
-	return prisma.task.findUniqueOrThrow({
-		where: { id },
-		include: {
-			assignee: {
-				select: { id: true, name: true, email: true, avatarUrl: true },
-			},
-			reporter: { select: { id: true, name: true, email: true } },
-			subtasks: { where: { deletedAt: null } },
-			comments: {
-				where: { deletedAt: null },
-				include: {
-					author: { select: { id: true, name: true, avatarUrl: true } },
+	const { organizationId } = await requireTaskMembership(id, userId);
+	const [task, activity] = await prisma.$transaction([
+		prisma.task.findUniqueOrThrow({
+			where: { id },
+			include: {
+				assignee: {
+					select: { id: true, name: true, email: true, avatarUrl: true },
 				},
+				reporter: { select: { id: true, name: true, email: true } },
+				subtasks: { where: { deletedAt: null } },
+				comments: {
+					where: { deletedAt: null },
+					include: {
+						author: { select: { id: true, name: true, avatarUrl: true } },
+						mentions: {
+							include: { user: { select: { id: true, name: true } } },
+						},
+					},
+				},
+				attachments: true,
+				labels: { include: { label: true } },
 			},
-			attachments: true,
-		},
-	});
+		}),
+		prisma.auditLog.findMany({
+			where: { organizationId, entity: "Task", entityId: id },
+			include: {
+				actor: { select: { id: true, name: true, avatarUrl: true } },
+			},
+			orderBy: { createdAt: "desc" },
+			take: 100,
+		}),
+	]);
+	return { ...task, activity };
 };
 
 export const update = async (
@@ -205,6 +229,7 @@ export const update = async (
 	const { membership, organizationId } = await requireTaskMembership(
 		id,
 		userId,
+		["OWNER", "MANAGER", "MEMBER"],
 	);
 	const existing = await prisma.task.findUniqueOrThrow({ where: { id } });
 	if (
@@ -213,13 +238,10 @@ export const update = async (
 		existing.assigneeId !== userId
 	)
 		throw new AppError(403, "Members can only edit their own tasks");
-	await verifyRelations(
-		{
-			projectId: existing.projectId,
-			sprintId: input.sprintId as string | null | undefined,
-		},
-		organizationId,
-	);
+	await verifyRelations({
+		projectId: existing.projectId,
+		sprintId: input.sprintId as string | null | undefined,
+	});
 	const data = { ...input } as Record<string, unknown>;
 	if (typeof data.dueDate === "string") data.dueDate = new Date(data.dueDate);
 	const task = await prisma.task.update({ where: { id }, data });
@@ -251,6 +273,7 @@ export const changeStatus = async (
 	const { membership, organizationId } = await requireTaskMembership(
 		id,
 		userId,
+		["OWNER", "MANAGER", "MEMBER"],
 	);
 	const task = await prisma.task.findUniqueOrThrow({ where: { id } });
 	if (
@@ -291,11 +314,24 @@ export const assign = async (
 		"MANAGER",
 	]);
 	if (assigneeId)
-		await requireOrganizationMembership(organizationId, assigneeId);
+		await requireProjectMembership(task.projectId, assigneeId, [
+			"OWNER",
+			"MANAGER",
+			"MEMBER",
+		]);
 	const updated = await prisma.task.update({
 		where: { id: task.id },
 		data: { assigneeId },
 	});
+	if (assigneeId && assigneeId !== userId)
+		await createNotification(prisma, {
+			userId: assigneeId,
+			organizationId,
+			type: "TASK_ASSIGNED",
+			title: "Task assigned",
+			message: "A task was assigned to you",
+			metadata: { taskId: id },
+		});
 	await writeAuditLog(prisma, {
 		organizationId,
 		actorId: userId,
@@ -316,6 +352,7 @@ export const softDelete = async (
 	const { membership, organizationId } = await requireTaskMembership(
 		id,
 		userId,
+		["OWNER", "MANAGER", "MEMBER"],
 	);
 	const task = await prisma.task.findUniqueOrThrow({ where: { id } });
 	if (membership.role === "MEMBER" && task.reporterId !== userId)
@@ -341,7 +378,11 @@ export const addAttachment = async (
 	ipAddress?: string,
 ) => {
 	if (!file) throw new AppError(400, "A supported file is required");
-	const { organizationId } = await requireTaskMembership(taskId, userId);
+	const { organizationId } = await requireTaskMembership(taskId, userId, [
+		"OWNER",
+		"MANAGER",
+		"MEMBER",
+	]);
 	const uploaded = await uploadBuffer(
 		file.buffer,
 		`taskflow/${organizationId}/${taskId}`,
@@ -366,4 +407,44 @@ export const addAttachment = async (
 		ipAddress,
 	});
 	return attachment;
+};
+
+export const kanban = async (
+	userId: string,
+	query: Record<string, unknown>,
+) => {
+	const projectId = String(query.projectId ?? "");
+	await requireProjectMembership(projectId, userId);
+	const sprintId =
+		typeof query.sprintId === "string" ? query.sprintId : undefined;
+	const assigneeId =
+		typeof query.assigneeId === "string" ? query.assigneeId : undefined;
+	const labelId = typeof query.labelId === "string" ? query.labelId : undefined;
+	const tasks = await prisma.task.findMany({
+		where: {
+			projectId,
+			deletedAt: null,
+			parentId: null,
+			...(sprintId ? { sprintId } : {}),
+			...(assigneeId ? { assigneeId } : {}),
+			...(labelId ? { labels: { some: { labelId } } } : {}),
+		},
+		include: {
+			assignee: { select: { id: true, name: true, avatarUrl: true } },
+			labels: { include: { label: true } },
+			_count: { select: { subtasks: true, comments: true, attachments: true } },
+		},
+		orderBy: [{ status: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+	});
+	const columns = Object.fromEntries(
+		(
+			["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"] as TaskStatus[]
+		).map((status) => [status, tasks.filter((task) => task.status === status)]),
+	);
+	return {
+		projectId,
+		sprintId: sprintId ?? null,
+		filters: { assigneeId: assigneeId ?? null, labelId: labelId ?? null },
+		columns,
+	};
 };
