@@ -1,0 +1,131 @@
+{
+  "info": {
+    "_postman_id": "04c1387a-1516-4ae2-8738-taskflow-b7a6",
+    "name": "TaskFlow Project Management SaaS API",
+    "description": "Category 8 Assignment 6 API. Run Login first, then Create Organization, Project, Sprint and Task. IDs and tokens are saved automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "organizationId", "value": "" },
+    { "key": "memberId", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "sprintId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "commentId", "value": "" },
+    { "key": "paymentId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Demo Owner\",\n  \"email\": \"owner@taskflow.dev\",\n  \"password\": \"Owner@12345\"\n}" }, "url": "{{baseUrl}}/auth/register" }
+        },
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) { pm.collectionVariables.set('accessToken', json.data.accessToken); pm.collectionVariables.set('refreshToken', json.data.refreshToken); }"] } }],
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"owner@taskflow.dev\",\n  \"password\": \"Owner@12345\"\n}" }, "url": "{{baseUrl}}/auth/login" }
+        },
+        { "name": "Google Login", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"idToken\": \"GOOGLE_ID_TOKEN\" }" }, "url": "{{baseUrl}}/auth/google" } },
+        { "name": "Refresh Token", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"refreshToken\": \"{{refreshToken}}\" }" }, "url": "{{baseUrl}}/auth/refresh-token" } },
+        { "name": "Logout", "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" } }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        { "name": "Get My Profile", "request": { "method": "GET", "url": "{{baseUrl}}/users/me" } },
+        { "name": "Update My Profile", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"name\": \"TaskFlow Owner\" }" }, "url": "{{baseUrl}}/users/me" } }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "item": [
+        {
+          "name": "Create Organization",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('organizationId', json.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"name\": \"Acme Product Team\", \"description\": \"Demo workspace\" }" }, "url": "{{baseUrl}}/organizations" }
+        },
+        { "name": "My Organizations", "request": { "method": "GET", "url": "{{baseUrl}}/organizations/mine" } },
+        { "name": "Get Organization", "request": { "method": "GET", "url": "{{baseUrl}}/organizations/{{organizationId}}" } },
+        { "name": "Update Organization", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"description\": \"Updated demo workspace\" }" }, "url": "{{baseUrl}}/organizations/{{organizationId}}" } },
+        { "name": "Add Member", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"email\": \"member@taskflow.dev\", \"role\": \"MEMBER\" }" }, "url": "{{baseUrl}}/organizations/{{organizationId}}/members" } },
+        {
+          "name": "List Members",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data[1]) pm.collectionVariables.set('memberId', json.data[1].id);"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/organizations/{{organizationId}}/members?page=1&limit=10&search=" }
+        },
+        { "name": "Change Member Role", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"role\": \"MANAGER\" }" }, "url": "{{baseUrl}}/organizations/{{organizationId}}/members/{{memberId}}" } },
+        { "name": "Remove Member", "request": { "method": "DELETE", "url": "{{baseUrl}}/organizations/{{organizationId}}/members/{{memberId}}" } },
+        { "name": "Soft Delete Organization", "request": { "method": "DELETE", "url": "{{baseUrl}}/organizations/{{organizationId}}" } }
+      ]
+    },
+    {
+      "name": "Projects and Sprints",
+      "item": [
+        {
+          "name": "Create Project",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('projectId', json.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"organizationId\": \"{{organizationId}}\",\n  \"name\": \"Website Redesign\",\n  \"key\": \"WEB\",\n  \"description\": \"Launch the new marketing website\"\n}" }, "url": "{{baseUrl}}/projects" }
+        },
+        { "name": "List Projects", "request": { "method": "GET", "url": "{{baseUrl}}/projects?organizationId={{organizationId}}&page=1&limit=10&search=&status=ACTIVE&sortBy=createdAt&sortOrder=desc" } },
+        { "name": "Get Project", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}" } },
+        { "name": "Update Project", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"ACTIVE\" }" }, "url": "{{baseUrl}}/projects/{{projectId}}" } },
+        { "name": "Soft Delete Project", "request": { "method": "DELETE", "url": "{{baseUrl}}/projects/{{projectId}}" } },
+        {
+          "name": "Create Sprint",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('sprintId', json.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"name\": \"Sprint 1\",\n  \"goal\": \"Deliver homepage\",\n  \"startDate\": \"2026-09-20T00:00:00.000Z\",\n  \"endDate\": \"2026-10-04T00:00:00.000Z\"\n}" }, "url": "{{baseUrl}}/sprints" }
+        },
+        { "name": "List Sprints", "request": { "method": "GET", "url": "{{baseUrl}}/sprints?projectId={{projectId}}" } },
+        { "name": "Start Sprint", "request": { "method": "PATCH", "url": "{{baseUrl}}/sprints/{{sprintId}}/start" } },
+        { "name": "Complete Sprint", "request": { "method": "PATCH", "url": "{{baseUrl}}/sprints/{{sprintId}}/complete" } }
+      ]
+    },
+    {
+      "name": "Tasks and Comments",
+      "item": [
+        {
+          "name": "Create Task",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('taskId', json.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"sprintId\": \"{{sprintId}}\",\n  \"title\": \"Build responsive navigation\",\n  \"description\": \"Implement desktop and mobile states\",\n  \"priority\": \"HIGH\"\n}" }, "url": "{{baseUrl}}/tasks" }
+        },
+        { "name": "Create Subtask", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"projectId\": \"{{projectId}}\", \"parentId\": \"{{taskId}}\", \"title\": \"Add mobile menu\" }" }, "url": "{{baseUrl}}/tasks" } },
+        { "name": "List and Filter Tasks", "request": { "method": "GET", "url": "{{baseUrl}}/tasks?projectId={{projectId}}&page=1&limit=10&search=navigation&priority=HIGH&sortBy=createdAt&sortOrder=desc" } },
+        { "name": "My Assigned Tasks", "request": { "method": "GET", "url": "{{baseUrl}}/tasks/mine?organizationId={{organizationId}}&page=1&limit=10" } },
+        { "name": "Get Task", "request": { "method": "GET", "url": "{{baseUrl}}/tasks/{{taskId}}" } },
+        { "name": "Update Task", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"priority\": \"URGENT\" }" }, "url": "{{baseUrl}}/tasks/{{taskId}}" } },
+        { "name": "Move Task", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"IN_PROGRESS\" }" }, "url": "{{baseUrl}}/tasks/{{taskId}}/status" } },
+        { "name": "Assign Task", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"assigneeId\": null }" }, "url": "{{baseUrl}}/tasks/{{taskId}}/assign" } },
+        { "name": "Upload Attachment", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": [] }] }, "url": "{{baseUrl}}/tasks/{{taskId}}/attachments" } },
+        { "name": "Soft Delete Task", "request": { "method": "DELETE", "url": "{{baseUrl}}/tasks/{{taskId}}" } },
+        {
+          "name": "Add Comment",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('commentId', json.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"taskId\": \"{{taskId}}\", \"content\": \"I am working on this now.\" }" }, "url": "{{baseUrl}}/comments" }
+        },
+        { "name": "List Comments", "request": { "method": "GET", "url": "{{baseUrl}}/comments?taskId={{taskId}}" } },
+        { "name": "Update Comment", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"content\": \"Updated progress note.\" }" }, "url": "{{baseUrl}}/comments/{{commentId}}" } },
+        { "name": "Delete Comment", "request": { "method": "DELETE", "url": "{{baseUrl}}/comments/{{commentId}}" } }
+      ]
+    },
+    {
+      "name": "Payments and Analytics",
+      "item": [
+        {
+          "name": "Create Stripe Checkout",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('paymentId', json.data.paymentId);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"organizationId\": \"{{organizationId}}\" }" }, "url": "{{baseUrl}}/payments/checkout" }
+        },
+        { "name": "Get Payment", "request": { "method": "GET", "url": "{{baseUrl}}/payments/{{paymentId}}" } },
+        { "name": "Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/analytics/dashboard?organizationId={{organizationId}}" } },
+        { "name": "Audit Logs", "request": { "method": "GET", "url": "{{baseUrl}}/analytics/audit-logs?organizationId={{organizationId}}&page=1&limit=10" } }
+      ]
+    }
+  ]
+}
