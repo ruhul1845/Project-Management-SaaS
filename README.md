@@ -1,14 +1,18 @@
 # TaskFlow — Project Management SaaS Backend
 
-TaskFlow is the Category 8 Assignment 6 backend: a secure, multi-tenant project management API for organizations, projects, sprints, tasks, subtasks, comments, attachments, payments, and audit history.
+TaskFlow is the Category 8 Assignment 6 backend: a secure, multi-tenant project management API for organizations, teams, projects, sprints, tasks, subtasks, labels, comments, mentions, attachments, notifications, payments, and audit history.
 
 ## Roles
 
 - `OWNER`: creates and controls an organization, manages all members and billing.
 - `MANAGER`: manages members, projects, sprints, assignments, and analytics.
-- `MEMBER`: works with permitted projects, tasks, subtasks, comments, and attachments.
+- `MEMBER`: works with unassigned projects and projects belonging to their teams.
+- `GUEST`: has read-only access to projects belonging to their teams.
+- `ADMIN`: system-level account that can inspect users/organizations and manage user status.
 
 Authorization is evaluated from each organization's membership, so one account can belong to several organizations with different roles.
+
+Teams add another permission layer: `LEAD`, `MEMBER`, and `VIEWER`. Organization owners/managers can manage every team; a team lead can manage their own team.
 
 ## Stack and architecture
 
@@ -18,7 +22,9 @@ Authorization is evaluated from each organization's membership, so one account c
 - Zod validation, Helmet, CORS, request rate limiting
 - Stripe Checkout with signed webhooks
 - Multer and Cloudinary attachments
-- Optional Redis list caching
+- Optional Redis project-list caching
+- In-app assignment, mention, and membership notifications
+- Kanban grouping, calendar aggregation, organization analytics, and audit logs
 - Route → controller → service → Prisma architecture
 
 ## Local setup
@@ -81,11 +87,12 @@ Copy the printed `whsec_...` into `STRIPE_WEBHOOK_SECRET`. Use Stripe's `4242 42
 
 1. Register or sign in with Google.
 2. Create an organization; the creator becomes its `OWNER`.
-3. Registered users can be added as `MANAGER` or `MEMBER`.
-4. Owners/managers create projects and sprints.
-5. Members create tasks and subtasks; managers assign work.
-6. Tasks move through validated Kanban transitions and critical actions produce audit logs.
-7. The owner starts Stripe Checkout; a verified webhook marks payment and activates the plan.
+3. Registered users can be added as `MANAGER`, `MEMBER`, or `GUEST`.
+4. Owners/managers create teams, add team members, and link projects to teams.
+5. Owners/managers create projects and sprints; permitted members create tasks and subtasks.
+6. Tasks move through validated Kanban transitions; labels, comments, mentions, attachments, notifications, and audit logs preserve collaboration history.
+7. Calendar and analytics endpoints summarize work across the organization.
+8. The owner starts Stripe Checkout; a verified webhook marks payment and activates the plan.
 
 ## API documentation
 
@@ -114,14 +121,20 @@ npm run lint
 
 ## Demo seed
 
-`npm run db:seed` creates a dedicated demo owner using `DEMO_OWNER_EMAIL` and `DEMO_OWNER_PASSWORD`. Change the example password before deployment and submit those dedicated credentials to the evaluator.
+`npm run db:seed` creates a demo owner and system admin using the `DEMO_OWNER_*` and `DEMO_ADMIN_*` variables. Change both example passwords before deployment and submit only dedicated demo credentials to the evaluator.
 
 ## Deployment
 
-`render.yaml` and `vercel.json` are included. Add all required environment variables in the host dashboard, use a hosted PostgreSQL `DATABASE_URL`, and configure Stripe's webhook endpoint as:
+`render.yaml` is included, and Vercel uses its zero-configuration Node/Express deployment. Add all required environment variables in the host dashboard, use a hosted PostgreSQL `DATABASE_URL`, and deploy migrations before the new application version:
+
+```bash
+npm run db:deploy
+```
+
+Configure Stripe's webhook endpoint as:
 
 ```text
 https://YOUR-LIVE-API/api/v1/payments/webhook
 ```
 
-For Render, the included blueprint runs migrations before starting. After deployment, verify `/health`, Google sign-in, Stripe Checkout, and the Stripe webhook in the live environment.
+For Render, the included blueprint runs migrations before starting. For Vercel, run `npm run db:deploy` against the production database from a trusted environment. After deployment, verify `/health`, Google sign-in, Stripe Checkout, and the Stripe webhook in the live environment.
