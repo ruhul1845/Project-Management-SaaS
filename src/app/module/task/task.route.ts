@@ -6,6 +6,10 @@ import * as controller from "./task.controller";
 import {
 	assignTaskSchema,
 	createTaskSchema,
+	kanbanQuerySchema,
+	listTasksSchema,
+	myTasksQuerySchema,
+	taskIdParamsSchema,
 	taskStatusSchema,
 	updateTaskSchema,
 } from "./task.validation";
@@ -13,10 +17,18 @@ import {
 export const taskRoutes = Router();
 taskRoutes.use(checkAuth);
 taskRoutes.post("/", validateRequest(createTaskSchema), controller.create);
-taskRoutes.get("/", controller.list);
-taskRoutes.get("/mine", controller.myTasks);
-taskRoutes.get("/kanban", controller.kanban);
-taskRoutes.get("/:id", controller.getById);
+taskRoutes.get("/", validateRequest(listTasksSchema), controller.list);
+taskRoutes.get(
+	"/mine",
+	validateRequest(myTasksQuerySchema),
+	controller.myTasks,
+);
+taskRoutes.get(
+	"/kanban",
+	validateRequest(kanbanQuerySchema),
+	controller.kanban,
+);
+taskRoutes.get("/:id", validateRequest(taskIdParamsSchema), controller.getById);
 taskRoutes.patch("/:id", validateRequest(updateTaskSchema), controller.update);
 taskRoutes.patch(
 	"/:id/status",
@@ -30,7 +42,12 @@ taskRoutes.patch(
 );
 taskRoutes.post(
 	"/:id/attachments",
+	validateRequest(taskIdParamsSchema),
 	upload.single("file"),
 	controller.addAttachment,
 );
-taskRoutes.delete("/:id", controller.remove);
+taskRoutes.delete(
+	"/:id",
+	validateRequest(taskIdParamsSchema),
+	controller.remove,
+);

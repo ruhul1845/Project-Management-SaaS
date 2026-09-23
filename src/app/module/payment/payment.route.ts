@@ -2,7 +2,7 @@ import { Router } from "express";
 import { checkAuth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
 import * as controller from "./payment.controller";
-import { checkoutSchema } from "./payment.validation";
+import { checkoutSchema, paymentIdParamsSchema } from "./payment.validation";
 
 export const paymentRoutes = Router();
 paymentRoutes.use(checkAuth);
@@ -11,4 +11,8 @@ paymentRoutes.post(
 	validateRequest(checkoutSchema),
 	controller.createCheckout,
 );
-paymentRoutes.get("/:id", controller.getPayment);
+paymentRoutes.get(
+	"/:id",
+	validateRequest(paymentIdParamsSchema),
+	controller.getPayment,
+);

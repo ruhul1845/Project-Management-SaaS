@@ -6,6 +6,9 @@ import * as controller from "./organization.controller";
 import {
 	addMemberSchema,
 	createOrganizationSchema,
+	listMembersSchema,
+	organizationIdParamsSchema,
+	organizationMemberParamsSchema,
 	updateMemberRoleSchema,
 	updateOrganizationSchema,
 } from "./organization.validation";
@@ -20,39 +23,43 @@ organizationRoutes.post(
 organizationRoutes.get("/mine", controller.getMine);
 organizationRoutes.get(
 	"/:organizationId",
+	validateRequest(organizationIdParamsSchema),
 	checkOrganizationRole("OWNER", "MANAGER", "MEMBER", "GUEST"),
 	controller.getById,
 );
 organizationRoutes.patch(
 	"/:organizationId",
-	checkOrganizationRole("OWNER"),
 	validateRequest(updateOrganizationSchema),
+	checkOrganizationRole("OWNER"),
 	controller.update,
 );
 organizationRoutes.delete(
 	"/:organizationId",
+	validateRequest(organizationIdParamsSchema),
 	checkOrganizationRole("OWNER"),
 	controller.remove,
 );
 organizationRoutes.post(
 	"/:organizationId/members",
-	checkOrganizationRole("OWNER", "MANAGER"),
 	validateRequest(addMemberSchema),
+	checkOrganizationRole("OWNER", "MANAGER"),
 	controller.addMember,
 );
 organizationRoutes.get(
 	"/:organizationId/members",
+	validateRequest(listMembersSchema),
 	checkOrganizationRole("OWNER", "MANAGER", "MEMBER", "GUEST"),
 	controller.listMembers,
 );
 organizationRoutes.patch(
 	"/:organizationId/members/:memberId",
-	checkOrganizationRole("OWNER"),
 	validateRequest(updateMemberRoleSchema),
+	checkOrganizationRole("OWNER"),
 	controller.updateMemberRole,
 );
 organizationRoutes.delete(
 	"/:organizationId/members/:memberId",
+	validateRequest(organizationMemberParamsSchema),
 	checkOrganizationRole("OWNER", "MANAGER"),
 	controller.removeMember,
 );

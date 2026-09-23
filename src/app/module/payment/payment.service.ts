@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { requireOrganizationMembership } from "../../utils/access";
 import { writeAuditLog } from "../../utils/audit";
+import { stripeEventSchema } from "./payment.validation";
 
 export const createCheckout = async (
 	userId: string,
@@ -97,11 +98,21 @@ export const handleWebhook = async (
 ) => {
 	if (!signature || !verifySignature(payload, signature))
 		throw new AppError(400, "Invalid Stripe signature");
-	const event = JSON.parse(payload.toString("utf8")) as {
-		id: string;
-		type: string;
-		data: { object: { id: string; payment_status?: string } };
-	};
+	let rawEvent: unknown;
+	try {
+		rawEvent = JSON.parse(payload.toString("utf8"));
+	} catch {
+		throw new AppError(400, "Invalid Stripe event payload");
+	}
+	const parsedEvent = stripeEventSchema.safeParse(rawEvent);
+	if (!parsedEvent.success) {
+		throw new AppError(
+			400,
+			"Invalid Stripe event payload",
+			parsedEvent.error.issues,
+		);
+	}
+	const event = parsedEvent.data;
 	const session = event.data.object;
 	if (
 		event.type === "checkout.session.completed" &&

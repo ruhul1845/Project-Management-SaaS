@@ -5,6 +5,9 @@ import * as controller from "./team.controller";
 import {
 	addTeamMemberSchema,
 	createTeamSchema,
+	listTeamsSchema,
+	teamIdParamsSchema,
+	teamMemberParamsSchema,
 	updateTeamMemberSchema,
 	updateTeamSchema,
 } from "./team.validation";
@@ -12,10 +15,14 @@ import {
 export const teamRoutes = Router();
 teamRoutes.use(checkAuth);
 teamRoutes.post("/", validateRequest(createTeamSchema), controller.create);
-teamRoutes.get("/", controller.list);
-teamRoutes.get("/:id", controller.getById);
+teamRoutes.get("/", validateRequest(listTeamsSchema), controller.list);
+teamRoutes.get("/:id", validateRequest(teamIdParamsSchema), controller.getById);
 teamRoutes.patch("/:id", validateRequest(updateTeamSchema), controller.update);
-teamRoutes.delete("/:id", controller.remove);
+teamRoutes.delete(
+	"/:id",
+	validateRequest(teamIdParamsSchema),
+	controller.remove,
+);
 teamRoutes.post(
 	"/:id/members",
 	validateRequest(addTeamMemberSchema),
@@ -26,4 +33,8 @@ teamRoutes.patch(
 	validateRequest(updateTeamMemberSchema),
 	controller.updateMember,
 );
-teamRoutes.delete("/:id/members/:memberId", controller.removeMember);
+teamRoutes.delete(
+	"/:id/members/:memberId",
+	validateRequest(teamMemberParamsSchema),
+	controller.removeMember,
+);

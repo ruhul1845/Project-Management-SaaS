@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationQuery, searchQuery, uuid } from "../../validation/common";
 
 const status = z.enum([
 	"PLANNING",
@@ -9,7 +10,7 @@ const status = z.enum([
 ]);
 export const createProjectSchema = z.object({
 	body: z.object({
-		organizationId: z.uuid(),
+		organizationId: uuid,
 		name: z.string().min(2).max(120),
 		key: z
 			.string()
@@ -19,16 +20,33 @@ export const createProjectSchema = z.object({
 		description: z.string().max(2000).optional(),
 		startDate: z.iso.datetime().optional(),
 		dueDate: z.iso.datetime().optional(),
-		teamId: z.uuid().optional(),
+		teamId: uuid.optional(),
 	}),
 });
 export const updateProjectSchema = z.object({
+	params: z.object({ id: uuid }),
 	body: z.object({
 		name: z.string().min(2).max(120).optional(),
 		description: z.string().max(2000).nullable().optional(),
 		status: status.optional(),
 		startDate: z.iso.datetime().nullable().optional(),
 		dueDate: z.iso.datetime().nullable().optional(),
-		teamId: z.uuid().nullable().optional(),
+		teamId: uuid.nullable().optional(),
+	}),
+});
+
+export const projectIdParamsSchema = z.object({
+	params: z.object({ id: uuid }),
+});
+
+export const listProjectsSchema = z.object({
+	query: z.object({
+		organizationId: uuid,
+		...paginationQuery,
+		search: searchQuery,
+		status: status.optional(),
+		teamId: uuid.optional(),
+		sortBy: z.enum(["createdAt", "updatedAt", "dueDate", "name"]).optional(),
+		sortOrder: z.enum(["asc", "desc"]).optional(),
 	}),
 });

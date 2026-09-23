@@ -23,5 +23,8 @@ export const googleLoginSchema = z.object({
 	body: z.object({ idToken: z.string().min(20) }),
 });
 export const refreshSchema = z.object({
-	body: z.object({ refreshToken: z.string().optional() }),
+	body: z
+		.object({ refreshToken: z.string().optional() })
+		.optional()
+		.default({}),
 });
