@@ -2,7 +2,7 @@
   "name": "project-management-saas-backend",
   "version": "1.0.0",
   "description": "Multi-tenant project management SaaS REST API",
-  "type": "module",
+  "type": "commonjs",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
