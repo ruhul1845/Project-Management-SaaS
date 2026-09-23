@@ -20,12 +20,10 @@ const start = async () => {
 	process.on("SIGINT", shutdown);
 };
 
-if (!process.env.VERCEL) {
-	start().catch(async (error) => {
-		console.error("Failed to start server:", error);
-		await prisma.$disconnect();
-		process.exit(1);
-	});
-}
+start().catch(async (error) => {
+	console.error("Failed to start server:", error);
+	await prisma.$disconnect();
+	process.exit(1);
+});
 
 export default app;
