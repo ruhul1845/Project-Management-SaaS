@@ -2,11 +2,12 @@
   "info": {
     "_postman_id": "04c1387a-1516-4ae2-8738-taskflow-b7a6",
     "name": "TaskFlow Project Management SaaS API",
-    "description": "Category 8 Assignment 6 API. Run Login first, then Create Organization, Project, Sprint and Task. IDs and tokens are saved automatically.",
+    "description": "Complete Category 8 Assignment 6 API collection, including service, authentication, organization, team, project, sprint, task, collaboration, payment webhook, analytics, admin, and cleanup routes. Run Login first, then create the organization hierarchy. IDs and tokens are saved automatically.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
   "variable": [
+    { "key": "serverUrl", "value": "https://project-management-saa-s-six.vercel.app" },
     { "key": "baseUrl", "value": "https://project-management-saa-s-six.vercel.app/api/v1" },
     { "key": "accessToken", "value": "" },
     { "key": "refreshToken", "value": "" },
@@ -22,9 +23,17 @@
     { "key": "labelId", "value": "" },
     { "key": "notificationId", "value": "" },
     { "key": "mentionedUserId", "value": "" },
-    { "key": "adminUserId", "value": "" }
+    { "key": "adminUserId", "value": "" },
+    { "key": "stripeSignature", "value": "" }
   ],
   "item": [
+    {
+      "name": "Service",
+      "item": [
+        { "name": "API Root", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{serverUrl}}/" } },
+        { "name": "Health Check", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{serverUrl}}/health" } }
+      ]
+    },
     {
       "name": "Authentication",
       "item": [
@@ -167,6 +176,20 @@
           "name": "Create Stripe Checkout",
           "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data) pm.collectionVariables.set('paymentId', json.data.paymentId);"] } }],
           "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"organizationId\": \"{{organizationId}}\" }" }, "url": "{{baseUrl}}/payments/checkout" }
+        },
+        {
+          "name": "Stripe Webhook",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "stripe-signature", "value": "{{stripeSignature}}", "description": "Use a real Stripe-signed header. Prefer Stripe CLI: stripe listen --forward-to <server>/api/v1/payments/webhook" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"evt_test_webhook\",\n  \"type\": \"checkout.session.completed\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"cs_test_replace_me\",\n      \"payment_status\": \"paid\"\n    }\n  }\n}" },
+            "url": "{{baseUrl}}/payments/webhook",
+            "description": "This endpoint requires Stripe's valid cryptographic signature. A manually invented signature will correctly return 400."
+          }
         },
         { "name": "Get Payment", "request": { "method": "GET", "url": "{{baseUrl}}/payments/{{paymentId}}" } },
         { "name": "Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/analytics/dashboard?organizationId={{organizationId}}" } },

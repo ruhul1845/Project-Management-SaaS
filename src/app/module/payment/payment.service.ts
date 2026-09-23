@@ -140,6 +140,12 @@ export const handleWebhook = async (
 			data: { status: "FAILED" },
 		});
 	}
+	if (event.type === "checkout.session.expired") {
+		await prisma.payment.updateMany({
+			where: { stripeSessionId: session.id, status: "PENDING" },
+			data: { status: "CANCELLED" },
+		});
+	}
 	return { received: true };
 };
 
