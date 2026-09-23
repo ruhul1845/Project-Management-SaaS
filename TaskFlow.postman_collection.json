@@ -7,7 +7,7 @@
   },
   "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "baseUrl", "value": "https://project-management-saa-s-six.vercel.app/api/v1" },
     { "key": "accessToken", "value": "" },
     { "key": "refreshToken", "value": "" },
     { "key": "organizationId", "value": "" },
