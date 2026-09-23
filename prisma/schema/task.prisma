@@ -1,0 +1,67 @@
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  dueDate     DateTime?
+  position    Int        @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  projectId  String
+  sprintId   String?
+  reporterId String
+  assigneeId String?
+  parentId   String?
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint   Sprint? @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  reporter User    @relation("TaskReporter", fields: [reporterId], references: [id])
+  assignee User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks Task[]  @relation("Subtasks")
+
+  comments    Comment[]
+  attachments Attachment[]
+
+  @@index([projectId, status, priority])
+  @@index([assigneeId, deletedAt])
+  @@index([sprintId])
+  @@map("tasks")
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  content   String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  taskId    String
+  authorId  String
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([taskId, deletedAt])
+  @@map("comments")
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  name       String
+  url        String
+  publicId   String
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+  taskId     String
+  uploaderId String
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id])
+
+  @@index([taskId])
+  @@map("attachments")
+}

@@ -1,0 +1,39 @@
+model Organization {
+  id                 String             @id @default(uuid())
+  name               String
+  slug               String             @unique
+  description        String?
+  logoUrl            String?
+  subscriptionStatus SubscriptionStatus @default(FREE)
+  stripeCustomerId   String?            @unique
+  deletedAt          DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  ownerId String
+  owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id])
+
+  memberships Membership[]
+  projects    Project[]
+  payments    Payment[]
+  auditLogs   AuditLog[]
+
+  @@index([ownerId])
+  @@index([deletedAt])
+  @@map("organizations")
+}
+
+model Membership {
+  id             String   @id @default(uuid())
+  role           Role     @default(MEMBER)
+  joinedAt       DateTime @default(now())
+  userId         String
+  organizationId String
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId, role])
+  @@map("memberships")
+}
